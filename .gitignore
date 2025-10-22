@@ -1,0 +1,115 @@
+# -------------------------------
+# Python
+# -------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+# (these files are created by PyInstaller for bundling apps)
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# SQLite / local DB files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and local temp data
+*.log
+*.pot
+*.pyproj
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# -------------------------------
+# FastAPI / SQLModel specific
+# -------------------------------
+# Environment configs
+.env
+.env.local
+.env.*.local
+*.env
+
+# Alembic (if using migrations)
+alembic/versions/*.pyc
+alembic/__pycache__/
+
+# -------------------------------
+# VS Code
+# -------------------------------
+.vscode/
+.history/
+
+# -------------------------------
+# mypy / pyright / pylance
+# -------------------------------
+.mypy_cache/
+.pytype/
+.pyre/
+.pyright/
+
+# -------------------------------
+# Docker / Compose
+# -------------------------------
+*.pid
+*.seed
+*.pid.lock
+docker-compose.override.yml
+*.bak
+
+# -------------------------------
+# Node (if you have a frontend inside same repo)
+# -------------------------------
+node_modules/
+dist/
+build/

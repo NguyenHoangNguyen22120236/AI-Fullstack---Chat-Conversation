@@ -1,0 +1,9 @@
+button {
+  background: #2563eb; color: #fff; border: none; padding: 8px 12px;
+  border-radius: 8px; cursor: pointer;
+}
+button:disabled { opacity: .55; cursor: not-allowed; }
+input {
+  border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; outline: none;
+}
+h2 { margin: 8px 0 12px; }
