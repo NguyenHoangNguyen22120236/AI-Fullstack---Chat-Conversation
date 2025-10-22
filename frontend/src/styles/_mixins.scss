@@ -1,0 +1,12 @@
+@mixin card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-sm;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

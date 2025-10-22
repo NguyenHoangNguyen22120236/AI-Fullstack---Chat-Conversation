@@ -1,57 +1,40 @@
-// src/components/MessageBubble.tsx
-import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import dayjs from 'dayjs';
-import { resolveAttachmentUrl } from '../api';
+import remarkGfm from 'remark-gfm';
+import './MessageBubble.scss';
+import type { ChatMessage, ToolOutputs } from '../api';
 
-type Props = {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  created_at: string;
-  attachment_type?: 'image' | 'csv' | null;
-  attachment_ref?: string | null;
-};
-
-export default function MessageBubble({
-  role,
-  content,
-  created_at,
-  attachment_type,
-  attachment_ref,
-}: Props) {
-  const isUser = role === 'user';
-  const border = isUser ? '#d1e7ff' : '#eee';
-  const bg = isUser ? '#f1f8ff' : '#fafafa';
-
+export function MessageBubble({ m, tool }: { m: ChatMessage; tool?: ToolOutputs }) {
+  const isUser = m.role === 'user';
   return (
-    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
-      <div
-        style={{
-          maxWidth: 720,
-          border: `1px solid ${border}`,
-          background: bg,
-          borderRadius: 12,
-          padding: '10px 14px',
-          margin: '8px 0',
-        }}
-      >
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
-          {isUser ? 'You' : 'Assistant'} • {dayjs(created_at).format('YYYY-MM-DD HH:mm:ss')}
-        </div>
-
-        {attachment_type === 'image' && attachment_ref && (
-          <div style={{ marginBottom: 8 }}>
-            <img
-              src={resolveAttachmentUrl(attachment_ref)}
-              alt="uploaded"
-              style={{ maxWidth: '100%', borderRadius: 8, border: '1px solid #eee' }}
-            />
+    <div className={`message-row ${isUser ? 'right' : 'left'}`}>
+      <div className={`bubble ${isUser ? 'bubble--user' : 'bubble--assistant'}`}>
+        {isUser ? (
+          <div className="prose prose-sm">{m.content}</div>
+        ) : (
+          <div className="prose prose-sm">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
           </div>
         )}
 
-        <div style={{ lineHeight: 1.5 }}>
-          <ReactMarkdown>{content}</ReactMarkdown>
-        </div>
+        {!isUser && tool && (
+          <div className="tool-panel">
+            {tool.image_path && (
+              <div>
+                <div className="section-title">Image referenced</div>
+                <div className="italic">(handled on server)</div>
+              </div>
+            )}
+            {tool.histogram_image && !m.content.includes('![Histogram](') && (
+              <div>
+                <div className="section-title">Histogram generated</div>
+                <img
+                  src={`${import.meta.env.VITE_API_BASE}/static/${tool.histogram_image.split('uploads/').pop()}`}
+                  alt="histogram"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

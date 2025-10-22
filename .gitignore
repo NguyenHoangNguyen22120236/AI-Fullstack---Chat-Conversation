@@ -113,3 +113,5 @@ docker-compose.override.yml
 node_modules/
 dist/
 build/
+
+backend/uploads/

@@ -1,0 +1,60 @@
+@import '../styles/variables';
+@import '../styles/mixins';
+
+.message-row {
+  width: 100%;
+  display: flex;
+  margin: $space-2 0;
+
+  &.right { justify-content: flex-end; }
+  &.left  { justify-content: flex-start; }
+}
+
+.bubble {
+  max-width: 78%;
+  white-space: pre-wrap;
+  border-radius: $radius-xl;
+  padding: $space-4 $space-4;
+  box-shadow: $shadow-sm;
+
+  &--user {
+    background: $brand; color: #fff;
+    border-bottom-right-radius: $space-1;
+  }
+
+  &--assistant {
+    @include card;
+    color: $text;
+    border-bottom-left-radius: $space-1;
+
+    .tool-panel {
+      margin-top: $space-3;
+      font-size: 12px;
+      color: $text-subtle;
+
+      .section-title { font-weight: 600; color: $text; }
+
+      img {
+        display: block;
+        max-width: 100%;
+        margin-top: $space-2;
+        border-radius: .5rem;
+        border: 1px solid $border;
+        box-shadow: $shadow-sm;
+      }
+
+      details {
+        summary { cursor: pointer; font-weight: 600; color: $text; }
+        pre {
+          overflow: auto;
+          font-size: 11px;
+          background: #f9fafb;
+          padding: $space-2;
+          border: 1px solid $border;
+          border-radius: .5rem;
+          max-height: 42vh;
+        }
+      }
+    }
+  }
+}

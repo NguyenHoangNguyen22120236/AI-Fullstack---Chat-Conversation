@@ -1,0 +1,20 @@
+/* Alert banner */
+.alert {
+  position: relative;
+  border: 1px solid #fecaca;      /* red-200 */
+  background: #fef2f2;            /* red-50  */
+  color: #991b1b;                 /* red-800 */
+  border-radius: 10px;
+  padding: 10px 36px 10px 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+
+  &__title { font-weight: 700; margin-bottom: 4px; font-size: 13px; }
+  &__body { font-size: 13px; white-space: pre-wrap; }
+  &__close {
+    position: absolute; right: 8px; top: 8px;
+    width: 22px; height: 22px; border-radius: 999px; border: none;
+    background: #fee2e2; color: #7f1d1d; cursor: pointer; font-weight: 700;
+  }
+  &__close:hover { background: #fecaca; }
+}

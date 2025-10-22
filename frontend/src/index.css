@@ -1,9 +1,52 @@
 button {
-  background: #2563eb; color: #fff; border: none; padding: 8px 12px;
-  border-radius: 8px; cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
 }
-button:disabled { opacity: .55; cursor: not-allowed; }
+
+button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 input {
-  border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; outline: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  outline: none;
 }
-h2 { margin: 8px 0 12px; }
+
+h2 {
+  margin: 8px 0 12px;
+}
+
+.prose :is(h1, h2, h3) {
+  margin-top: .75rem;
+  margin-bottom: .5rem;
+}
+
+.prose p {
+  margin-top: .25rem;
+  margin-bottom: .25rem;
+}
+
+.prose ul {
+  margin-top: .25rem;
+  margin-bottom: .25rem;
+}
+
+.prose li {
+  margin: .125rem 0;
+}
+
+.prose table {
+  font-size: 13px;
+}
+
+.prose table th,
+.prose table td {
+  padding: 6px 10px;
+}

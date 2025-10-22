@@ -1,10 +1,23 @@
 # deps.py
-from sqlmodel import SQLModel, create_engine
+from __future__ import annotations
+from pathlib import Path
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
 
-_engine = None
-def get_engine():
-    global _engine
-    if _engine is None:
-        _engine = create_engine("sqlite:///db.sqlite3", connect_args={"check_same_thread": False})
-        SQLModel.metadata.create_all(_engine)
-    return _engine
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "db.sqlite3"
+
+engine = create_engine(
+    f"sqlite:///{DB_PATH}",
+    echo=False,
+    future=True,
+    connect_args={"check_same_thread": False},
+)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+
+def get_db() -> Session:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

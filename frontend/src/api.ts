@@ -1,87 +1,116 @@
-// src/api.ts
-export const API = import.meta.env.VITE_API_BASE as string;
-
-function jsonFetch<T>(input: RequestInfo, init?: RequestInit) {
-  return fetch(input, init).then(async (r) => {
-    if (!r.ok) throw new Error(await r.text());
-    return r.json() as Promise<T>;
-  });
-}
-
-export type HistoryItem = {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  created_at: string;
-  attachment_type?: 'image' | 'csv' | null;
-  attachment_ref?: string | null;
+export type ToolOutputs = {
+  image_path?: string;
+  csv_rows?: number;
+  csv_cols?: number;
+  basic_stats?: Record<string, unknown>;
+  missing_values?: Record<string, number>;
+  histogram_image?: string;
 };
 
-export async function createSession(title = 'New Chat') {
-  return jsonFetch<{ session_id: number }>(`${API}/chat/session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
-  });
-}
+export type AttachmentKind = 'image' | 'csv' | 'plot';
 
-export async function getHistory(session_id: number) {
-  const u = new URL(`${API}/chat/history`);
-  u.searchParams.set('session_id', String(session_id));
-  return jsonFetch<HistoryItem[]>(u.toString());
-}
+export type Attachment = {
+  id: number;
+  kind: AttachmentKind;
+  path: string;
+  original_name?: string | null;
+  mime?: string | null;
+  public_url?: string | null;
+};
 
-export async function sendChat(session_id: number, user_text: string) {
-  const u = new URL(`${API}/chat/send`);
-  u.searchParams.set('session_id', String(session_id));
-  u.searchParams.set('user_text', user_text);
-  return jsonFetch<{ reply: string }>(u.toString(), { method: 'POST' });
-}
+export type ChatMessage = {
+  id?: number; // when loaded from DB
+  role: 'user' | 'assistant';
+  content: string;
+  ts?: number;
+  created_at?: string;
+  attachments?: Attachment[]; // when loaded via /sessions/{id}/messages
+};
 
-export async function uploadImage(session_id: number, file: File) {
+export type AttachmentInfo = {
+  id: number;
+  kind: AttachmentKind;
+  path: string;
+  original_name?: string | null;
+  mime?: string | null;
+  public_url?: string | null;
+};
+
+export type ChatResponse = {
+  session_id: string;
+  assistant_message: string;
+  tool_outputs: ToolOutputs;
+  message_id: number;
+
+  user_message?: {
+    id: number;
+    attachments: AttachmentInfo[];
+  };
+
+  assistant_message_meta?: {
+    id: number;
+    attachments: AttachmentInfo[];
+  };
+};
+
+export type SessionSummary = {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  last_message: string;
+  message_count: number;
+};
+
+export type SessionListResponse = { sessions: SessionSummary[]; offset: number; limit: number };
+
+export type SessionMessagesResponse = {
+  session: { id: string; title: string | null; created_at: string; updated_at: string };
+  messages: Array<{
+    id: number;
+    role: 'user' | 'assistant';
+    content: string;
+    tool_outputs?: ToolOutputs;
+    created_at: string;
+    attachments: Attachment[];
+  }>;
+};
+
+const API_BASE = import.meta.env.VITE_API_BASE as string;
+
+export async function postChat(
+  payload: { session_id: string; message: string; file?: File | null; csv_url?: string | null }
+): Promise<ChatResponse> {
   const fd = new FormData();
-  fd.append('file', file);
-  fd.append('session_id', String(session_id));
-  return jsonFetch<{ image_path: string }>(`${API}/image/upload`, {
-    method: 'POST',
-    body: fd,
-  });
+  fd.append('session_id', payload.session_id);
+  fd.append('message', payload.message);
+  if (payload.file) fd.append('file', payload.file);
+  if (payload.csv_url) fd.append('csv_url', payload.csv_url);
+
+  const res = await fetch(`${API_BASE}/chat`, { method: 'POST', body: fd });
+
+  if (!res.ok) {
+    let msg = `Request failed (${res.status})`;
+    try {
+      const data = await res.json();
+      msg = (data?.detail as string) ?? JSON.stringify(data);
+    } catch {
+      msg = await res.text();
+    }
+    throw new Error(msg || `Request failed (${res.status})`);
+  }
+  return res.json();
 }
 
-export async function askImage(session_id: number, image_path: string, question: string) {
-  const u = new URL(`${API}/image/ask`);
-  u.searchParams.set('session_id', String(session_id));
-  u.searchParams.set('image_path', image_path);
-  u.searchParams.set('question', question);
-  return jsonFetch<{ answer: string }>(u.toString(), { method: 'POST' });
+
+export async function fetchSessions(limit = 50, offset = 0): Promise<SessionListResponse> {
+  const res = await fetch(`${API_BASE}/sessions?limit=${limit}&offset=${offset}`);
+  if (!res.ok) throw new Error(`Fetch sessions failed (${res.status})`);
+  return res.json();
 }
 
-export async function uploadCSV(file: File) {
-  const fd = new FormData();
-  fd.append('file', file);
-  return jsonFetch<{ dataset_id: number; preview: any }>(`${API}/csv/upload`, {
-    method: 'POST',
-    body: fd,
-  });
-}
-
-export async function csvFromUrl(url: string) {
-  return jsonFetch<{ dataset_id: number; preview: any }>(`${API}/csv/from-url`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
-  });
-}
-
-export const csvSummary   = (id: number) => jsonFetch<any>(`${API}/csv/${id}/summary`);
-export const csvStats     = (id: number) => jsonFetch<any>(`${API}/csv/${id}/stats`);
-export const csvMissing   = (id: number) => jsonFetch<{ column: string; missing: number }>(`${API}/csv/${id}/missing`);
-export const csvHistogram = (id: number, column: string, bins = 20) =>
-  jsonFetch<{ counts: number[]; edges: number[] }>(`${API}/csv/${id}/histogram?column=${encodeURIComponent(column)}&bins=${bins}`);
-
-export function resolveAttachmentUrl(p?: string | null) {
-  if (!p) return '';
-  // Assumes backend serves /uploads/** statically from the same base
-  // Example: app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-  if (p.startsWith('uploads/')) return `${API}/${p}`;
-  return `${API}/${p.replace(/^\//, '')}`;
+export async function fetchSessionMessages(session_id: string): Promise<SessionMessagesResponse> {
+  const res = await fetch(`${API_BASE}/sessions/${session_id}/messages`);
+  if (!res.ok) throw new Error(`Fetch messages failed (${res.status})`);
+  return res.json();
 }
