@@ -137,12 +137,20 @@ body {
 }
 
 .sidebar {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px); 
+  border-right: 1px solid #e5e7eb;
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  height: 72vh;
-  overflow: auto;
+
+  &__head {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+    padding: 12px 10px;
+    border-bottom: 1px solid #f1f5f9;
+  }
 }
 
 .sidebar__head {

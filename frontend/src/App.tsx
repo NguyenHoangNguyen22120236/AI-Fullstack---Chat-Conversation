@@ -3,13 +3,14 @@ import { postChat, type ChatMessage, type ToolOutputs, fetchSessions, fetchSessi
 import { MessageBubble } from './components/MessageBubble';
 import './styles/app.scss';
 import { ErrorBanner } from './components/ErrorBanner';
+import { TypingBubble } from './components/TypingBubble';
 
 function randomSession() {
   return Math.random().toString(36).slice(2, 10);
 }
 
 
-const MAX_FILE_MB = 20; // tune this
+const MAX_FILE_MB = 20; 
 const ALLOWED_EXT = ['.png', '.jpg', '.jpeg', '.csv'];
 
 
@@ -26,6 +27,8 @@ function isValidCsvUrl(u: string) {
 export default function App() {
   const [sessionId, setSessionId] = useState<string>(() => randomSession());
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState<boolean>(false);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [toolForLastAssistant, setToolForLastAssistant] = useState<ToolOutputs | undefined>();
 
@@ -40,6 +43,11 @@ export default function App() {
   const canSend = useMemo(() => input.trim().length > 0 || file || csvUrl.trim().length > 0, [input, file, csvUrl]);
 
   const [error, setError] = useState<string>('');
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   function showError(msg: string) {
     setError(msg);
@@ -50,6 +58,13 @@ export default function App() {
   async function refreshSessions() {
     const res = await fetchSessions();
     setSessions(res.sessions);
+    try {
+      setSessionsLoading(true);
+      const res = await fetchSessions();
+      setSessions(res.sessions);
+    } finally {
+      setSessionsLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -174,7 +189,7 @@ export default function App() {
         </div>
       </header>
 
-      <div style={{paddingTop: '10px'}}>
+      <div style={{paddingTop: '10px', position: 'sticky'}}>
         <ErrorBanner text={error} onClose={() => setError('')} />
       </div>
 
@@ -193,10 +208,21 @@ export default function App() {
           </div>
 
           <ul className="conv-list">
-            {sessions.length === 0 && (
+            {sessionsLoading && (
+              <>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <li key={`sk-${i}`} style={{marginBottom: 8}}>
+                    <div className="conv-item skeleton" style={{height: 42}} />
+                  </li>
+                ))}
+              </>
+            )}
+
+            {!sessionsLoading && sessions.length === 0 && (
               <li style={{color:'#6b7280', fontSize:12, padding:'6px 2px'}}>No conversations yet.</li>
             )}
-            {sessions.map(s => (
+
+            {!sessionsLoading && sessions.map(s => (
               <li key={s.id}>
                 <button
                   className={`conv-item ${s.id === sessionId ? 'is-active' : ''}`}
@@ -239,6 +265,9 @@ export default function App() {
                 )}
               </div>
             ))}
+
+            {loading && <TypingBubble />}
+             <div ref={bottomRef} />
           </div>
         </main>
       </div>

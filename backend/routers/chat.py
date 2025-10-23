@@ -1,15 +1,16 @@
 # routers/chat.py
-from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
-from fastapi.responses import JSONResponse
+from typing import Optional, List
 from pathlib import Path
 import shutil
+
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, desc
 
 from deps import get_db
 from models import SessionChat, Message, Attachment
-from services.llm import chat_core
+from services.llm import chat_orchestrator  # dùng orchestrator (LLM tool-calling)
 from services.csv_tools import ensure_dirs, download_csv_from_url
 
 router = APIRouter(prefix="", tags=["chat"])
@@ -20,7 +21,11 @@ IMG_DIR = UPLOAD_DIR / "images"
 CSV_DIR = UPLOAD_DIR / "csv"
 ensure_dirs(IMG_DIR, CSV_DIR, UPLOAD_DIR)
 
+
 def make_public_url(path: str) -> Optional[str]:
+    """
+    Map absolute path under uploads/ -> /static/... ; else None
+    """
     up = BASE_DIR / "uploads"
     p = Path(path)
     try:
@@ -29,14 +34,16 @@ def make_public_url(path: str) -> Optional[str]:
     except Exception:
         return None
 
+
 @router.post("/chat")
 async def chat(
     session_id: str = Form(...),
     message: str = Form(...),
-    file: Optional[UploadFile] = File(None),
+    file: Optional[UploadFile] = File(None),  # <-- PHẢI LÀ UploadFile
     csv_url: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
+    # 1) Lấy / tạo session
     sess = db.get(SessionChat, session_id)
     if not sess:
         sess = SessionChat(id=session_id, title=message[:120])
@@ -45,9 +52,10 @@ async def chat(
     else:
         sess.title = sess.title or message[:120]
 
+    # 2) Lưu file user upload (nếu có)
     saved_image_path = None
     saved_csv_path = None
-    user_attachments: list[dict] = []   
+    user_attachments: List[dict] = []
 
     if file is not None:
         content_type = (file.content_type or "").lower()
@@ -65,13 +73,16 @@ async def chat(
         else:
             raise HTTPException(status_code=400, detail="Unsupported file type.")
 
+    # 3) Tải CSV từ URL nếu có
     if csv_url and not saved_csv_path:
         saved_csv_path = await download_csv_from_url(csv_url, CSV_DIR, session_id)
 
+    # 4) Lưu user message
     user_msg = Message(session_id=session_id, role="user", content=message, tool_outputs=None)
     db.add(user_msg)
     db.flush()
 
+    # 5) Lưu attachments của user (image / csv)
     if saved_image_path:
         att = Attachment(
             message_id=user_msg.id,
@@ -110,42 +121,40 @@ async def chat(
             "public_url": make_public_url(att.path),
         })
 
-    assistant_message, tool_outputs, _ = await chat_core(
+    # 6) Gọi orchestrator (LLM sẽ tự quyết định dùng tool nào, và tự tái dùng CSV/ảnh đã lưu nếu không có file mới)
+    assistant_message, tool_outputs, _, new_asst_attachments = await chat_orchestrator(
+        db=db,
         session_id=session_id,
         message=message,
         history=[{"role": m.role, "content": m.content} for m in sess.messages],
         image_path=str(saved_image_path) if saved_image_path else None,
         csv_path=str(saved_csv_path) if saved_csv_path else None,
-        csv_url=csv_url,
     )
 
+    # 7) Lưu assistant message
     asst_msg = Message(
         session_id=session_id, role="assistant", content=assistant_message, tool_outputs=tool_outputs or None
     )
     db.add(asst_msg)
     db.flush()
 
-    assistant_attachments: list[dict] = [] 
-
-    if tool_outputs and tool_outputs.get("histogram_image"):
+    # 8) Lưu attachments do tool sinh ra (ví dụ: ảnh histogram)
+    assistant_attachments: List[dict] = []
+    for meta in (new_asst_attachments or []):
         att = Attachment(
             message_id=asst_msg.id,
-            kind="plot",
-            path=tool_outputs["histogram_image"],
-            original_name=Path(tool_outputs["histogram_image"]).name,
-            mime="image/png",
+            kind=meta["kind"],
+            path=meta["path"],
+            original_name=meta.get("original_name"),
+            mime=meta.get("mime"),
         )
         db.add(att)
         db.flush()
-        assistant_attachments.append({
-            "id": att.id,
-            "kind": "plot",
-            "path": att.path,
-            "original_name": att.original_name,
-            "mime": att.mime,
-            "public_url": make_public_url(att.path),
-        })
+        meta["id"] = att.id
+        meta["public_url"] = meta.get("public_url") or make_public_url(att.path)
+        assistant_attachments.append(meta)
 
+    # 9) Commit & trả về
     sess.updated_at = func.now()
     db.commit()
     db.refresh(asst_msg)
@@ -166,6 +175,7 @@ async def chat(
             },
         }
     )
+
 
 @router.get("/sessions")
 def list_sessions(
@@ -194,6 +204,7 @@ def list_sessions(
         )
     return {"sessions": rows, "offset": offset, "limit": limit}
 
+
 @router.get("/sessions/{session_id}/messages")
 def get_session_messages(session_id: str, db: Session = Depends(get_db)):
     sess = db.get(SessionChat, session_id)
@@ -214,8 +225,7 @@ def get_session_messages(session_id: str, db: Session = Depends(get_db)):
                     "path": a.path,
                     "original_name": a.original_name,
                     "mime": a.mime,
-                    "public_url": f"/static/{Path(a.path).relative_to(Path(__file__).resolve().parents[1] / 'uploads').as_posix()}"
-                                  if Path(a.path).as_posix().find("/uploads/") >= 0 or "uploads" in Path(a.path).parts else None
+                    "public_url": make_public_url(a.path),
                 }
                 for a in m.attachments
             ],
