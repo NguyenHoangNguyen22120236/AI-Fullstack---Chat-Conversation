@@ -1,8 +1,8 @@
-# 🚀 AI-Fullstack-Intern — Chat Conversation App
+# 🚀 Chat Conversation App
 
-A full-stack chat application built with **FastAPI (Python)** and **React + TypeScript**, supporting **RAG**, **file uploads**, and ** AI responses**.
+A full-stack chat application built with **FastAPI (Python)** and **React + TypeScript**, supporting **RAG**, **file uploads**, and **AI responses**.
 
-**Link demo video**: https://youtu.be/TMVNSE0yRgg
+**Link demo video**: https://youtu.be/rjD8mxaTz7U
 ---
 
 ## 🧠 Tech Stack
