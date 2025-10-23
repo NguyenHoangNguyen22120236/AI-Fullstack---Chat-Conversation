@@ -2,6 +2,7 @@
 
 A full-stack chat application built with **FastAPI (Python)** and **React + TypeScript**, supporting **RAG**, **file uploads**, and **streaming AI responses**.
 
+**Link demo video**: https://youtu.be/TMVNSE0yRgg
 ---
 
 ## 🧠 Tech Stack
